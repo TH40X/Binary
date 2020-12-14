@@ -2,28 +2,40 @@ import src.globals as gb
 
 
 class Node:
-    def __init__(self, center, box):
+    def __init__(self, center, gate, fen):
+        self.fen = fen
         self.active = False
         self.last_update = 0
-        self.box = box
-        self.link = set()
+        self.gate = gate
         self.center = center
-
-
-    def draw(self, fen):
-        self.fen = fen
-        x, y = self.center
-        ident = fen.fond.create_oval(x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE, outline = "black", width = 3, fill = "white")
-        self.ident = ident
-        return ident
-
-    def update_color(self):
-        self.fen.fond.itemconfig(self.ident, fill = "red" if self.active else "white")
+        # self.nodes représente les nodes auquelles elle est connectée
+        # pour une input_node, il ne peut y avoir au plus qu'une seule node
+        self.next = set()
+        self.prev = None
+        self.links = set()
 
     def update_center(self, center):
         self.center = center
-        x, y = center
-        self.fen.fond.coords(self.ident, x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE)
+
+    def clic(self, evt):
+        print("clic on node with id = {}".format(self.id))
+
+    def r_clic(self, evt):
+        print(self.fen.link_id)
+        if self.fen.link_id == None:
+            print("Initialisation d'un lien")
+            #Création d'un nouveau lien
+            X, Y = self.center
+            id = self.fen.fond.create_line(X, Y, X, Y, width = 2, fill = "black")
+            self.fen.link_id = id
+            self.fen.link_node = self
+        else:
+            print("Terminaison d'un lien")
+            #Implémentation du lien
+            x, y = self.fen.link_node.center
+            print("lien", self.center[0])
+            self.fen.fond.coords(self.fen.link_id, x, y, self.center[0], self.center[1])
+            self.link_to(self.fen.link_node)
 
 
 
@@ -33,54 +45,51 @@ class Input_node(Node):
         """
         Si la box auquelle la node appartient est à jour, on push les node de sortie
         """
-        for node in self.box.inputs:
+        for node in self.gate.inputs:
             # si toutes les nodes ne sont pas à jour : pas la peine d'update
-            if not node.link:
+            if not node.next:
+                # la node n'est pas connectée
                 node.last_update = gb.UPDATE_ID
                 continue
             if node.last_update < gb.UPDATE_ID:
                 return
         # la box est à jour : on l'update
-        self.box.evaluate()
-        for output_node in self.box.outputs:
+        self.gate.evaluate()
+        for output_node in self.gate.outputs:
             output_node.push()
+
+    def link_to(self, other):
+        self.prev = other
+        self.fen.link_id = None
+        self.fen.link_node = None
 
 class Output_node(Node):
     def push(self):
         """
         Envoie la valeur vers les nodes suivantes
         """
-        if not self.link:
+        if not self.next:
             # pas de lien qui part de cette node
             return
-        for link in self.link:
-            next_node = link.input
-            next_node.active = self.active
-            next_node.last_update = gb.UPDATE_ID
-            next_node.push()
+        for node in self.next:
+            node.active = self.active
+            node.last_update = gb.UPDATE_ID
+            node.push()
+
+    def link_to(self, other):
+        self.next.add(other)
+        self.links.add(self.fen.link_id)
+        self.fen.link_id = None
+        self.fen.link_node = None
 
 class Main_output_node(Input_node):
-    def draw(self, fen):
-        self.fen = fen
-        x, y = self.center
-        ident = fen.fond.create_oval(x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE, outline = "black", width = 3, fill = "white")
-        self.ident = ident
-        return ident
-
-    def push(self):
+    def clic(self, evt):
         pass
 
 class Main_input_node(Output_node):
-    def draw(self, fen):
-        self.fen = fen
-        x, y = self.center
-        ident = fen.fond.create_oval(x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE, outline = "black", width = 3, fill = "white")
-        fen.fond.tag_bind(ident, "<Button-1>", self.clic)
-        self.ident = ident
-        return ident
 
     def clic(self, evt):
-        print("clic on node with id = {}".format(self.ident))
+        print("clic on node with id = {}".format(self.id))
         self.active = not self.active
-        self.update_color()
-        self.box.evaluate()
+        self.gate.evaluate()
+        self.gate.fen.update(self) # force l'actualisation de la node

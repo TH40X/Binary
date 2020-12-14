@@ -1,6 +1,6 @@
 from tkinter import Tk, Canvas
 import src.globals as gb
-from src.box import Current_box
+from src.box import Current_box, And_box
 
 
 
@@ -16,19 +16,20 @@ class Window(Tk):
         # INIT WINDOW
         Tk.__init__(self)
         self.attributes("-topmost", True)
-        self.geometry("{}x{}+10+10".format(gb.WINDOW_WIDTH, gb.WINDOW_HEIGH))
-        self.fond = Canvas(self, width = gb.WINDOW_WIDTH, height = gb.WINDOW_HEIGH, bg = gb.WINDOW_BG)
+        self.geometry("{}x{}+10+10".format(gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT))
+        self.fond = Canvas(self, width = gb.WINDOW_WIDTH, height = gb.WINDOW_HEIGHT, bg = gb.WINDOW_BG)
         self.fond.pack()
-        self.fond.create_line(50, 0, 50, gb.WINDOW_HEIGH, width = 2, fill = "black")
-        self.fond.create_line(gb.WINDOW_WIDTH - 50, 0, gb.WINDOW_WIDTH - 50, gb.WINDOW_HEIGH, width = 2, fill = "black")
+        self.fond.create_line(50, 0, 50, gb.WINDOW_HEIGHT, width = 2, fill = "black")
+        self.fond.create_line(gb.WINDOW_WIDTH - 50, 0, gb.WINDOW_WIDTH - 50, gb.WINDOW_HEIGHT, width = 2, fill = "black")
 
         # ATTRIBUTS
-        self.main_box = Current_box()
+        self.main_box = Current_box(self)
         self.boxes = set()
         self.links = set()
         self.nodes = set()
         self.last_in = []
         self.last_out = []
+        self.selected = None
 
         # BINDINGS
         self.bind("<Control-Key-S>", self.save_conf)
@@ -36,12 +37,27 @@ class Window(Tk):
         self.bind("<Down>", self.remove_input)
         self.bind("<Control-Up>", self.add_output)
         self.bind("<Control-Down>", self.remove_output)
+        self.bind("<Key-a>", self.and_gate)
+        self.bind("<Key-o>", self.or_gate)
+        self.bind("<Motion>", self.move)
 
         # MAINLOOP
         self.mainloop()
 
+    def move(self, evt):
+        pass
+
     def save_conf(self, evt):
         pass
+
+    def and_gate(self, evt):
+        print("ajoute d'une porte AND")
+        gate = And_box(self, (evt.x, evt.y))
+        id = gate.draw()
+        self.boxes.add(id)
+
+    def or_gate(self, evt):
+        print("ajoute d'une porte OR")
 
     def add_input(self, evt):
         print("Ajout d'une node input")

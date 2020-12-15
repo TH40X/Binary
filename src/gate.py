@@ -32,6 +32,16 @@ class Gate:
     def clic(self, evt):
         print("clic on box with id = {}".format(self.ident))
 
+    def __repr__(self):
+        nodes_to_string = ""
+        for input_node in self.inputs:
+            nodes_to_string += "{},".format(input_node.id)
+        nodes_to_string = nodes_to_string[:-1] + ";"
+        for output_node in self.outputs:
+            nodes_to_string += "{},".format(output_node.id)
+        nodes_to_string = nodes_to_string[:-1] + "\n"
+        return("Gate:{}:{}".format(self.name, nodes_to_string))
+
 class And_gate(Gate):
     def __init__(self, fen, center):
         self.fen = fen

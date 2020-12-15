@@ -2,7 +2,7 @@ import src.globals as gb
 from src.link import Link
 
 class Node:
-    def __init__(self, center, gate, fen):
+    def __init__(self, center, gate, fen=None):
         self.fen = fen
         self.active = False
         self.gate = gate
@@ -36,10 +36,6 @@ class Node:
             self.fen.link.finish(self)
             self.link_to()
             self.fen.link = None
-
-
-
-
 
 class Input_node(Node):
     def push(self):
@@ -79,6 +75,9 @@ class Input_node(Node):
         if self.prev_link:
             self.prev_link.delete()
 
+    def __repr__(self):
+        return("Node:input:{}:{}\n".format(self.id, self.prev.id))
+
 class Output_node(Node):
     def push(self):
         """
@@ -90,9 +89,7 @@ class Output_node(Node):
             # pas de lien qui part de cette node
         else:
             for node in self.next:
-                print(node)
                 node.active = self.active
-                print(node.active)
                 node.push()
         #fin du push, on update l'affichage
         self.fen.update(self)
@@ -119,6 +116,37 @@ class Output_node(Node):
         for link in self.next_links.copy():
             link.delete()
 
+    def __repr__(self):
+        next_to_string = ""
+        for next in self.next:
+            next_to_string += "{},".format(next.id)
+        next_to_string = next_to_string[:-1]
+        return("Node:output:{}:{}\n".format(self.id, next_to_string))
+
+class Hidden_input_node(Input_node):
+    def push(self):
+        """
+        Push une node : ne fait pas d'update d'affichage
+        """
+        if not self.prev:
+            self.active = False
+        self.gate.evaluate()
+        for output_node in self.gate.outputs:
+            output_node.push()
+
+class Hidden_output_node(Output_node):
+    def push(self):
+        """
+        Push une node : ne fait pas d'update d'affichage
+        """
+        if not self.next:
+            print("pas de lien à exploiter")
+            # pas de lien qui part de cette node
+        else:
+            for node in self.next:
+                node.active = self.active
+                node.push()
+
 class Main_output_node(Input_node):
     def push(self):
         """
@@ -130,10 +158,19 @@ class Main_output_node(Input_node):
         print("_____________________________________________")
         pass
 
-class Main_input_node(Output_node):
+    def __repr__(self):
+        return("Node:main_output:{}:{}\n".format(self.id, self.prev.id))
 
+class Main_input_node(Output_node):
     def clic(self, evt):
         print("_____________________________________________")
         print("clic on node with id = {}".format(self.id))
         self.active = not self.active
         self.push()
+
+    def __repr__(self):
+        next_to_string = ""
+        for next in self.next:
+            next_to_string += "{},".format(next.id)
+        next_to_string = next_to_string[:-1]
+        return("Node:main_input:{}:{}\n".format(self.id, next_to_string))

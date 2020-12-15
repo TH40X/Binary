@@ -1,7 +1,7 @@
 from tkinter import Tk, Canvas
 import src.globals as gb
-from src.gate import Current_gate, And_gate, Gate
-from src.node import Node, Input_node, Output_node
+from src.gate import Current_gate, And_gate, Or_gate, Gate
+from src.node import Node, Input_node, Output_node, Main_input_node
 
 
 
@@ -28,8 +28,7 @@ class Window(Tk):
         self.main_gate.fen = self
         self.gates = set()
         self.selected = None
-        self.link_node = None
-        self.link_id = None
+        self.link = None
 
         # BINDINGS
         self.bind("<Control-Key-S>", self.save_conf)
@@ -45,56 +44,60 @@ class Window(Tk):
         self.mainloop()
 
     def move(self, evt):
-        if self.link_id:
+        if self.link:
             # mise à jour de l'affichage du link
-            self.fond.coords(self.link_id, self.link_node.center[0], self.link_node.center[1], evt.x, evt.y)
-            self.fond.tag_lower(self.link_id)
+            self.fond.coords(self.link.id, self.link.node1.center[0], self.link.node1.center[1], evt.x, evt.y)
+            self.fond.tag_lower(self.link.id)
 
     def save_conf(self, evt):
         pass
 
+    def draw_link(self, link):
+        """
+        Dessine un link
+        """
+        x, y = link.node1.center
+        id = self.fond.create_line(x, y, x, y, fill = "black", width = 2)
+        return id
+
     def draw_node(self, node):
         """
-        Dessine une node et ajoute son id à la liste des nodes
+        Dessine une node
         """
         x, y = node.center
         id = self.fond.create_oval(x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE, outline = "black", width = 3, fill = "white")
         self.fond.tag_bind(id, "<Button-1>", node.clic)
         self.fond.tag_bind(id, "<Button-3>", node.r_clic)
+        self.fond.tag_bind(id, "<Control-Button-1>", node.delete)
+        node.text = self.fond.create_text(x, y, text = str(id))
         return id
 
     def update(self, item):
-        print("Updating {}".format(type(item)))
-        print("{}{}".format(Node, item.__class__.__bases__))
         target_class = item.__class__.__bases__
 
         if Node in target_class or Output_node in target_class or Input_node in target_class:
+            print("Updating node {}".format(item.id))
             #c'est une node
-            print(item.center)
             x, y = item.center
             self.fond.coords(item.id, x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE)
             self.fond.itemconfig(item.id, fill = "red" if item.active else "white")
+            self.fond.coords(item.text, x, y)
 
-            if type(item) == Output_node:
-                for node in item.next:
-                    self.update(node)
-            elif type(item) == Input_node:
-                # on a update une node appartenant à une gate : on update cette gate
-                if type(item.gate) != Current_gate:
-                    self.update(item.gate)
+            for link in item.next_links:
+                x1, y1 = link.node1.center
+                x2, y2 = link.node2.center
+                self.fond.coords(link.id, x1, y1, x2, y2)
+            if item.prev_link:
+                x1, y1 = item.prev_link.node1.center
+                x2, y2 = item.prev_link.node2.center
+                self.fond.coords(item.prev_link.id, x1, y1, x2, y2)
 
         elif Gate in target_class:
             #c'est une gate
             if type(item) == Current_gate:
-                for node in item.outputs:
-                    self.update(node)
+                #Permet le placement des nodes principales du circuit
                 for node in item.inputs:
                     self.update(node)
-            else:
-                x, y = item.center
-                self.fond.coords(item.id, x - gb.BOX_WIDTH, y - item.height, x + gb.BOX_WIDTH, y + item.height)
-
-                # on update que la node de sortie
                 for node in item.outputs:
                     self.update(node)
 
@@ -128,6 +131,10 @@ class Window(Tk):
 
     def or_gate(self, evt):
         print("ajoute d'une porte OR")
+        gate = Or_gate(self, (evt.x, evt.y))
+        id = self.draw_gate(gate)
+        gate.id = id
+        self.update(gate)
 
     def add_input(self, evt):
         print("Ajout d'une node input")

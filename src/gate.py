@@ -17,11 +17,12 @@ class Gate:
             node.update_center((x, y))
         x = self.center[0] + gb.BOX_WIDTH
         for i, node in enumerate(self.outputs):
-            y = self.center[1] + (gb.NODE_SIZE + 10) * i - (len(self.outputs) - 1) * (gb.NODE_SIZE + 10) / 2
+            y = self.center[1] + (2 * gb.NODE_SIZE + 10) * i - (len(self.outputs) - 1) * (2 * gb.NODE_SIZE + 10) / 2
             node.update_center((x, y))
 
 
     def evaluate(self):
+        print("Evaluation initialisée sur la gate : {}".format(self.id))
         """
         Calcule la sortie en fonction de l'entrée
         """
@@ -46,6 +47,7 @@ class And_gate(Gate):
 
     def evaluate(self):
         self.outputs[0].active = self.inputs[0].active and self.inputs[1].active
+        self.fen.update(self)
 
 class Or_gate(Gate):
     def __init__(self, fen, center):
@@ -57,10 +59,12 @@ class Or_gate(Gate):
         input2 = Input_node((0, 0), self, fen)
         output = Output_node((0, 0), self, fen)
 
-        Box.__init__(self, [input1, input2], [output])
+        Gate.__init__(self, [input1, input2], [output])
+        self.update_nodes_coords()
 
     def evaluate(self):
         self.outputs[0].active = self.inputs[0].active or self.inputs[1].active
+        self.fen.update(self)
 
 
 class Current_gate(Gate):
@@ -104,6 +108,7 @@ class Current_gate(Gate):
         if not self.inputs:
             return None
         node = self.inputs.pop(-1)
+        node.delete(None)
         self.update_centers(self.inputs)
         return node
 
@@ -125,14 +130,15 @@ class Current_gate(Gate):
         if not self.outputs:
             return None
         node = self.outputs.pop(-1)
+        node.delete(None)
         self.update_centers(self.outputs)
         return node
 
     def evaluate(self):
+        print("Initialisation de l'évaluation générale")
         """
         Calcule la sortie en fonction de l'entrée
         """
-        gb.UPDATE_ID += 1
 
         for output_node in self.inputs:
             output_node.push()

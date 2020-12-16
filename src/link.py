@@ -1,4 +1,5 @@
 import src.node as nd
+import src.globals as gb
 
 class Link:
     def __init__(self, node1):
@@ -14,7 +15,7 @@ class Link:
             self.node1.prev_link = None
             # Supprime node1 de la node précédente
             self.node2.next.remove(self.node1)
-            print(self.node2.next_links)
+            if gb.DEBUG:print(self.node2.next_links)
             self.node2.next_links.remove(self)
             # Supprime l'affichage du lien
             self.node1.fen.fond.delete(self.id)

@@ -1,0 +1,13 @@
+Gate:NOT:66:68
+Gate:NAND:78,80:82
+Gate:NOT:72:74
+Node:main_input:58:72
+Node:main_input:60:66
+Node:main_output:62:82
+Node:input:66:60
+Node:output:68:80
+Node:input:78:74
+Node:input:80:68
+Node:output:82:62
+Node:input:72:58
+Node:output:74:78

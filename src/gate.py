@@ -8,7 +8,19 @@ class Gate:
         self.inputs = inputs
         self.outputs = outputs
         self.height = max(len(self.inputs), len(self.outputs)) * (2 * gb.NODE_SIZE + 10) / 2
+        self.delta_x, self.delta_y = 0, 0
 
+    def delete(self, evt):
+        if gb.DEBUG:print("Suppression de la gate : {}".format(self.id))
+        self.fen.gates.remove(self)
+        for node in self.inputs:
+            node.delete(evt) # ne détruit que les liens
+            self.fen.fond.delete(node.id)
+        for node in self.outputs:
+            node.delete(evt) # ne détruit que les liens
+            self.fen.fond.delete(node.id)
+        self.fen.fond.delete(self.id)
+        self.fen.fond.delete(self.name_id)
 
     def update_nodes_coords(self):
         x = self.center[0] - gb.BOX_WIDTH
@@ -22,25 +34,37 @@ class Gate:
 
 
     def evaluate(self):
-        print("Evaluation initialisée sur la gate : {}".format(self.id))
+        if gb.DEBUG:print("Evaluation initialisée sur la gate {} : {}".format(self.name, self.id))
         """
-        Calcule la sortie en fonction de l'entrée
+        Push toutes les entrées, pour actualiser l'affichage à l'initialisation de la gate
         """
         for input_node in self.inputs:
             input_node.push()
 
     def clic(self, evt):
-        print("clic on box with id = {}".format(self.ident))
+        if gb.DEBUG:print("clic on box with id = {}".format(self.id))
+        self.fen.selected = self
+        self.delta_x, self.delta_y = self.center[0] - evt.x, self.center[1] - evt.y
 
     def __repr__(self):
         nodes_to_string = ""
         for input_node in self.inputs:
             nodes_to_string += "{},".format(input_node.id)
-        nodes_to_string = nodes_to_string[:-1] + ";"
+        nodes_to_string = nodes_to_string[:-1] + ":"
         for output_node in self.outputs:
             nodes_to_string += "{},".format(output_node.id)
         nodes_to_string = nodes_to_string[:-1] + "\n"
         return("Gate:{}:{}".format(self.name, nodes_to_string))
+
+class New_gate(Gate):
+    """
+    Permet de précharger une gate
+    """
+    def __init__(self, fen, center, name):
+        self.id = None
+        self.fen = fen
+        self.center = center
+        self.name = name
 
 class And_gate(Gate):
     def __init__(self, fen, center):
@@ -48,33 +72,17 @@ class And_gate(Gate):
         self.center = center
         self.name = "AND"
 
-        input1 = Input_node((0, 0), self, fen)
-        input2 = Input_node((0, 0), self, fen)
-        output = Output_node((0, 0), self, fen)
-
-        Gate.__init__(self, [input1, input2], [output])
-        self.update_nodes_coords()
-
     def evaluate(self):
         self.outputs[0].active = self.inputs[0].active and self.inputs[1].active
-        self.fen.update(self)
 
-class Or_gate(Gate):
+class Not_gate(Gate):
     def __init__(self, fen, center):
         self.fen = fen
         self.center = center
-        self.name = "OR"
-
-        input1 = Input_node((0, 0), self, fen)
-        input2 = Input_node((0, 0), self, fen)
-        output = Output_node((0, 0), self, fen)
-
-        Gate.__init__(self, [input1, input2], [output])
-        self.update_nodes_coords()
+        self.name = "NOT"
 
     def evaluate(self):
-        self.outputs[0].active = self.inputs[0].active or self.inputs[1].active
-        self.fen.update(self)
+        self.outputs[0].active = not self.inputs[0].active
 
 
 class Current_gate(Gate):
@@ -97,7 +105,7 @@ class Current_gate(Gate):
         taille = len(target)
         x = 50 * (target is self.inputs) + (gb.WINDOW_WIDTH - 50) * (target is self.outputs)
         for i, node in enumerate(target):
-            y = gb.WINDOW_HEIGHT / 2 + 100 * i - (taille - 1)  * 50
+            y = gb.WINDOW_HEIGHT / 2 + 70 * i - (taille - 1)  * 35
             node.update_center((x, y))
 
     def add_input(self):
@@ -145,7 +153,7 @@ class Current_gate(Gate):
         return node
 
     def evaluate(self):
-        print("Initialisation de l'évaluation générale")
+        if gb.DEBUG:print("Initialisation de l'évaluation générale")
         """
         Calcule la sortie en fonction de l'entrée
         """

@@ -5,6 +5,7 @@ import src.globals as gb
 
 class Gate:
     def __init__(self, inputs, outputs):
+        gb.GATE_NUMBER += 1
         self.inputs = inputs
         self.outputs = outputs
         self.height = max(len(self.inputs), len(self.outputs)) * (2 * gb.NODE_SIZE + 10) / 2
@@ -16,9 +17,11 @@ class Gate:
         for node in self.inputs:
             node.delete(evt) # ne détruit que les liens
             self.fen.fond.delete(node.id)
+            self.fen.fond.delete(node.text)
         for node in self.outputs:
             node.delete(evt) # ne détruit que les liens
             self.fen.fond.delete(node.id)
+            self.fen.fond.delete(node.text)
         self.fen.fond.delete(self.id)
         self.fen.fond.delete(self.name_id)
 
@@ -36,10 +39,11 @@ class Gate:
     def evaluate(self):
         if gb.DEBUG:print("Evaluation initialisée sur la gate {} : {}".format(self.name, self.id))
         """
-        Push toutes les entrées, pour actualiser l'affichage à l'initialisation de la gate
+        ATTENTION : UTILISEE QU'A L'INITIALISATION DE LA GATE
         """
-        for input_node in self.inputs:
-            input_node.push()
+        gb.PRE_UPDATE()
+        for output_node in self.outputs:
+            output_node.need_previous()
 
     def clic(self, evt):
         if gb.DEBUG:print("clic on box with id = {}".format(self.id))

@@ -4,6 +4,8 @@ import src.gate as gt
 
 class Node:
     def __init__(self, center, gate, fen=None):
+        gb.NODE_NUMBER += 1
+        self.last_update = 0
         self.id = None
         self.fen = fen
         self.active = False
@@ -15,6 +17,24 @@ class Node:
         self.prev = None
         self.next_links = set()
         self.prev_link = None
+
+    def is_hidden(self):
+        return False
+
+    def need_previous(self):
+        debug(self)
+        if self.last_update < gb.UPDATE_ID:
+            gb.UPDATE_NUMBER += 1
+            self.last_update = gb.UPDATE_ID
+            if self.get_type() == "output" and self.gate.name in ("AND", "NOT"):
+                for input in self.gate.inputs:
+                    input.need_previous()
+                self.gate.evaluate()
+            if self.prev:
+                self.prev.need_previous()
+                self.active = self.prev.active
+        if not self.is_hidden():
+            self.fen.update(self)
 
     def update_center(self, center):
         self.center = center
@@ -30,15 +50,20 @@ class Node:
             #Création d'un nouveau lien
             link = Link(self)
             id = self.fen.draw_link(link)
-            link.id = id
+            link.id_list = [id]
             self.fen.link = link
         else:
-            if (self.fen.link.node1.get_type(), self.get_type()) in (("input", "output"), ("output", "input")):
+            if (self.fen.link.node1.get_type(), self.get_type()) in (
+                    ("input", "output"), ("output", "input"),
+                    ("main_input", "input"), ("input", "main_input"),
+                    ("main_input", "main_output"), ("main_output", "main_input"),
+                    ("output", "main_output"), ("main_output", "output")):
                 if gb.DEBUG:print("Terminaison d'un lien")
                 #Implémentation du lien
                 self.fen.link.finish(self)
                 self.link_to()
                 self.fen.link = None
+                self.fen.update_all()
 
 class Input_node(Node):
     def get_type(self):
@@ -49,7 +74,11 @@ class Input_node(Node):
         Si la box auquelle la node appartient est à jour, on push les node de sortie
         A la fin du push, on update la node, ainsi, les nodes sont update en cascade
         """
-        debug(self)  
+        if self.last_update < gb.UPDATE_ID:
+            self.last_update = gb.UPDATE_ID
+        else:
+            return
+        debug(self)
 
         if type(self.gate) in (gt.And_gate, gt.Not_gate):
             self.gate.evaluate()
@@ -67,19 +96,6 @@ class Input_node(Node):
                 node.push()
         self.fen.update(self)
 
-    # def push_forward(self):
-    #     """
-    #     Envoie la valeur vers les nodes suivantes
-    #     """
-    #     if gb.DEBUG:print("push FORWARD effectué sur la node input : {}".format(self.id))
-    #     if not self.next:
-    #         if gb.DEBUG:print("pas de lien à exploiter")
-    #         # pas de lien qui part de cette node
-    #     else:
-    #         for node in self.next:
-    #             node.active = self.active
-    #             node.push()
-
     def link_to(self):
         self.prev = self.fen.link.node1
         self.prev_link = self.fen.link
@@ -87,7 +103,9 @@ class Input_node(Node):
         self.prev.next_links.add(self.fen.link)
         self.fen.update(self.prev)
         #Après l'ajout d'un lien, on update avec un push
-        self.prev.push()
+        gb.PRE_UPDATE()
+        self.need_previous()
+        # self.prev.push()
         self.fen.update(self.gate)
 
     def destroy_old_input(self):
@@ -117,6 +135,7 @@ class Output_node(Node):
         """
         Envoie la valeur vers les nodes suivantes
         """
+
         debug(self)
         if not self.next:
             if gb.DEBUG:print("pas de lien à exploiter")
@@ -135,7 +154,10 @@ class Output_node(Node):
         self.fen.link.node1.prev_link = self.fen.link
         self.fen.update(self)
         #Après l'ajout d'un lien, on update avec un push
-        self.push()
+        gb.PRE_UPDATE()
+        for next in self.next:
+            self.need_previous()
+        # self.push()
 
     def destroy_old_input(self):
         """
@@ -158,10 +180,17 @@ class Output_node(Node):
         return("Node:output:{}:{}\n".format(self.id, next_to_string))
 
 class Hidden_input_node(Input_node):
+    def is_hidden(self):
+        return True
     def push(self):
         """
         Push une node : ne fait pas d'update d'affichage
         """
+        if self.last_update < gb.UPDATE_ID:
+            self.last_update = gb.UPDATE_ID
+        else:
+            return
+
         debug(self)
         if type(self.gate) in (gt.And_gate, gt.Not_gate):
             self.gate.evaluate()
@@ -179,10 +208,13 @@ class Hidden_input_node(Input_node):
                 node.push()
 
 class Hidden_output_node(Output_node):
+    def is_hidden(self):
+        return True
     def push(self):
         """
         Push une node : ne fait pas d'update d'affichage
         """
+
         debug(self)
         if self.next:
             for node in self.next:
@@ -202,14 +234,23 @@ class Main_output_node(Input_node):
         pass
 
     def __repr__(self):
-        return("Node:main_output:{}:{}\n".format(self.id, self.prev.id))
+        if self.prev:
+            return("Node:main_output:{}:{}\n".format(self.id, self.prev.id))
+        else:
+            return("Node:main_output:{}:\n".format(self.id))
 
 class Main_input_node(Output_node):
+    def need_previous(self):
+        self.last_update = gb.UPDATE_ID
+        self.fen.update(self)
+    def get_type(self):
+        return("main_input")
     def clic(self, evt):
         if gb.DEBUG:print("_____________________________________________")
         if gb.DEBUG:print("clic on node with id = {}".format(self.id))
         self.active = not self.active
-        self.push()
+        # self.push()
+        self.fen.update_all()
 
     def __repr__(self):
         next_to_string = ""
@@ -219,4 +260,4 @@ class Main_input_node(Output_node):
         return("Node:main_input:{}:{}\n".format(self.id, next_to_string))
 
 def debug(node):
-        if gb.DEBUG:print("push effectué sur la node de type {}, sur la gate {}, avec pour état {}, et pour id {}".format(node.get_type(), node.gate.name, node.active, node.id))
+        if gb.DEBUG:print("[NEED] {} {} {} id = {}".format(node.get_type(), node.gate.name, node.active, node.id))

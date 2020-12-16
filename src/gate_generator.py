@@ -90,7 +90,7 @@ def gate_from_add(fen):
 
     fen.gates.add(gate)
     id = fen.draw_gate(gate)
-    fen.update(gate)
+    fen.update_all()
 
 def gate_from_not(fen):
     gate = Not_gate(fen, (gb.WINDOW_WIDTH / 2, gb.WINDOW_HEIGHT / 2))
@@ -101,7 +101,7 @@ def gate_from_not(fen):
 
     fen.gates.add(gate)
     id = fen.draw_gate(gate)
-    fen.update(gate)
+    fen.update_all()
 
 class Generator:
     def __init__(self, gate_name, fen):
@@ -195,4 +195,4 @@ class Generator:
         final_gate.id = id
         if gb.DEBUG:print("création de la gate : {}".format(id))
         final_gate.evaluate()
-        self.fen.update(final_gate)
+        # self.fen.update(final_gate)

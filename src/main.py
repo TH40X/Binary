@@ -1,14 +1,14 @@
 from tkinter import Tk, Canvas
 import src.globals as gb
-from src.gate import Current_gate, And_gate, Not_gate, Gate
-from src.node import Node, Input_node, Output_node, Main_input_node
+from src.gate import And_gate, Not_gate, Gate, New_gate
+from src.node import Node, Input_node, Output_node, Main_input_node, Main_output_node
 import os
 from src.gate_generator import Generator
 from src.link import Link
 
 
 def GB_INFO(evt):
-    print("____________________________________________________________")
+    print("____________________________________________")
     print("Nombre totale de portes créées : {}".format(gb.GATE_NUMBER))
     print("Nombre totale de node créées : {}".format(gb.NODE_NUMBER))
     print("Nombre de nodes mises à jour sur la dernière update : {}".format(gb.UPDATE_NUMBER))
@@ -28,13 +28,11 @@ class Window(Tk):
         self.geometry("{}x{}+10+10".format(gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT + 50))
         self.fond = Canvas(self, width = gb.WINDOW_WIDTH, height = gb.WINDOW_HEIGHT + 50, bg = gb.WINDOW_BG)
         self.fond.pack()
-        self.fond.create_line(50, 0, 50, gb.WINDOW_HEIGHT, width = 2, fill = "black")
-        self.fond.create_line(gb.WINDOW_WIDTH - 50, 0, gb.WINDOW_WIDTH - 50, gb.WINDOW_HEIGHT, width = 2, fill = "black")
+        self.init_input_output()
 
         # ATTRIBUTS
-        self.main_gate = Current_gate(self)
-        self.main_gate.fen = self
-        self.main_gate.name = 'MAIN'
+        self.main_gate = New_gate(self, "MAIN")
+        Gate.__init__(self.main_gate, [], [])
         self.gates = set()
         self.selected = None
         self.link = None
@@ -42,10 +40,6 @@ class Window(Tk):
 
         # BINDINGS
         self.bindings = {"<Control-Key-s>" : self.save_conf_name,
-                         "<Up>" : self.add_input,
-                         "<Down>" : self.remove_input,
-                         "<Control-Up>" : self.add_output,
-                         "<Control-Down>" : self.remove_output,
                          "<Motion>" : self.move,
                          "<ButtonRelease-1>" : self.release_clic,
                          "<Button-2>" : self.cancel_link,
@@ -58,22 +52,43 @@ class Window(Tk):
         # MAINLOOP
         self.mainloop()
 
+    ######################### INPUT/OUTPUT #########################
+    def init_input_output(self):
+        self.input_line = self.fond.create_rectangle(0, 0, 50, gb.WINDOW_HEIGHT, width = 10, fill = "black")
+        self.fond.tag_bind(self.input_line, "<Button-1>", self.add_input)
+        self.output_line = self.fond.create_rectangle(gb.WINDOW_WIDTH - 50, 0, gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT, width = 10, fill = "black")
+        self.fond.tag_bind(self.output_line, "<Button-1>", self.add_output)
+
+    def add_input(self, evt):
+        node = Main_input_node(self.main_gate, self)
+        node.center = (50, evt.y)
+        self.main_gate.inputs += [node]
+        self.draw_node(node)
+        self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
+
+    def add_output(self, evt):
+        node = Main_output_node(self.main_gate, self)
+        node.center = (gb.WINDOW_WIDTH - 50, evt.y)
+        self.main_gate.outputs += [node]
+        self.draw_node(node)
+        self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
+
     ######################### BINDINGS #########################
     def enable_bindings(self):
-        if gb.DEBUG:print("Bindings enabled")
+        gb.debug("Bindings enabled")
         for to_bind in self.bindings:
             self.bind(to_bind, self.bindings[to_bind])
     def disable_bindings(self):
-        if gb.DEBUG:print("Bindings disabled")
+        gb.debug("Bindings disabled")
         for to_unbind in self.bindings:
             self.unbind(to_unbind)
 
     def save_pressed_key(self, evt):
-        lettre = evt.char.upper()
-        if lettre in "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ":
-            #la lettre est autorisée
-            self.gate_name += lettre
-            self.fond.itemconfig(self.name_id, text = self.gate_name)
+        if evt.keycode == 22:
+            self.gate_name = self.gate_name[:-1]
+        elif evt.char.upper() in "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ":
+            self.gate_name += evt.char.upper()
+        self.fond.itemconfig(self.name_id, text = self.gate_name)
 
     ######################### MOVE EVENTS #########################
     def cancel_link(self, evt):
@@ -103,12 +118,10 @@ class Window(Tk):
             y = gb.WINDOW_HEIGHT + 25
             generator = Generator(gate_name, self)
             self.generators.add(generator)
-            id = self.fond.create_rectangle(x, y - 20, x + 100, y + 20, width = 2, fill = "gray")
-            generator.id = id
-            name_id = self.fond.create_text(x + 50, y, text = gate_name)
-            generator.name_id = name_id
-            self.fond.tag_bind(id, "<Button-1>", generator.create_gate)
-            self.fond.tag_bind(name_id, "<Button-1>", generator.create_gate)
+            generator.id = self.fond.create_rectangle(x, y - 20, x + 100, y + 20, width = 2, fill = "gray")
+            generator.name_id = self.fond.create_text(x + 50, y, text = gate_name)
+            self.fond.tag_bind(generator.id, "<Button-1>", generator.create_gate)
+            self.fond.tag_bind(generator.name_id, "<Button-1>", generator.create_gate)
 
     def reload_below_gate(self):
         for generator in self.generators:
@@ -167,78 +180,84 @@ class Window(Tk):
         self.enable_bindings()
 
     ######################### DRAWING #########################
+    def get_center_from_point(self, node_or_tuple):
+        try:
+            return node_or_tuple.center
+        except:
+            return node_or_tuple
+
     def draw_link(self, link):
         """
         Dessine un link
         """
-        try:
-            x, y = link.points_list[-1].center
-        except:
-            x, y = link.points_list[-1]
-        id = self.fond.create_line(x, y, x, y, fill = "white", width = 2)
-        self.fond.tag_bind(id, "<Button-3>", link.r_clic)
-        return id
+        x, y = self.get_center_from_point(link.points_list[-1])
+        link.id_list += [self.fond.create_line(x, y, x, y, fill = "white", width = 2)]
+        self.fond.tag_bind(link.id_list[-1], "<Button-3>", link.r_clic)
 
     def draw_node(self, node):
         """
         Dessine une node
         """
         x, y = node.center
-        id = self.fond.create_oval(x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE, outline = "black", width = 3, fill = "white")
-        self.fond.tag_bind(id, "<Button-1>", node.clic)
-        self.fond.tag_bind(id, "<Button-3>", node.r_clic)
-        self.fond.tag_bind(id, "<Button-2>", node.delete)
-        node.text = self.fond.create_text(x, y, text = str(id))
+        node.id = self.fond.create_oval(x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE, outline = "black", width = 2, fill = "white")
+        self.fond.tag_bind(node.id, "<Button-1>", node.clic)
+        self.fond.tag_bind(node.id, "<Button-3>", node.r_clic)
+        self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
+        node.text = self.fond.create_text(x, y, text = str(node.id))
         self.fond.tag_bind(node.text, "<Button-1>", node.clic)
         self.fond.tag_bind(node.text, "<Button-3>", node.r_clic)
-        self.fond.tag_bind(node.text, "<Button-2>", node.delete)
-        return id
+        self.fond.tag_bind(node.text, "<Button-2>", node.destroy)
 
     def draw_gate(self, gate):
         """
         Affiche une gate et les nodes associées
         """
         x, y = gate.center
-        id = self.fond.create_rectangle(x - gb.BOX_WIDTH, y - gate.height, x + gb.BOX_WIDTH, y + gate.height, outline = "black", fill = "gray", width = 3)
-        gate.id = id
-        self.fond.tag_bind(id, "<Button-1>", gate.clic)
-        self.fond.tag_bind(id, "<Button-2>", gate.delete)
-
-        name_id = self.fond.create_text(x, y, text = gate.name)
-        gate.name_id = name_id
-        self.fond.tag_bind(name_id, "<Button-1>", gate.clic)
-        self.fond.tag_bind(name_id, "<Button-2>", gate.delete)
+        gate.id = self.fond.create_rectangle(x - gb.BOX_WIDTH, y - gate.height, x + gb.BOX_WIDTH, y + gate.height, outline = "black", fill = "gray", width = 3)
+        self.fond.tag_bind(gate.id, "<Button-1>", gate.clic)
+        self.fond.tag_bind(gate.id, "<Button-2>", gate.delete)
+        gate.name_id = self.fond.create_text(x, y, text = gate.name)
+        self.fond.tag_bind(gate.name_id, "<Button-1>", gate.clic)
+        self.fond.tag_bind(gate.name_id, "<Button-2>", gate.delete)
 
         for node in gate.inputs:
-            id2 = self.draw_node(node)
-            node.id = id2
+            self.draw_node(node)
         for node in gate.outputs:
-            id3 = self.draw_node(node)
-            node.id = id3
+            self.draw_node(node)
         return id
 
     ######################### UPDATE DISPLAY #########################
     def update_all(self):
         """
         Deux update sont nécéssaire pour que les flip flop marchent
+        Un update se fait en 3 étapes :
+        1) On update les nodes d'entrée, afin de mettre à jour leur date de MAJ
+        et mettre à jour l'affichage, meme de celles qui ne sont pas reliées
+        2) On update toutes les gates, afin de mettre à jour les gates, meme
+        celles qui ne sont pas connectées
+        3) On update en partant des nodes de sortie
         """
         gb.PRE_UPDATE()
+        # 1)
         for node in self.main_gate.inputs:
             node.need_previous()
+        # 2)
         for gate in self.gates:
-            #Actualise toutes les gates
             for output_node in gate.outputs:
                 output_node.need_previous()
+        # 3)
         for node in self.main_gate.outputs:
             node.need_previous()
         # Deuxieme update
         gb.UPDATE_ID += 1
+        # 1)
         for node in self.main_gate.inputs:
             node.need_previous()
+        # 2)
         for gate in self.gates:
-            #Actualise toutes les gates
             for output_node in gate.outputs:
                 output_node.need_previous()
+        # 3)
         for node in self.main_gate.outputs:
             node.need_previous()
 
@@ -246,48 +265,35 @@ class Window(Tk):
         target_class = item.__class__.__bases__
 
         if type(item) == Link:
-            try:
-                x2, y2 = item.points_list[-1]
-            except:
-                x2, y2 = item.points_list[-1].center
-            try:
-                x1, y1 = item.points_list[-2]
-            except:
-                x1, y1 = item.points_list[-2].center
+            x2, y2 = self.get_center_from_point(item.points_list[-1])
+            x1, y1 = self.get_center_from_point(item.points_list[-2])
             self.fond.coords(item.id_list[-1], x1, y1, x2, y2)
-            try:
-                x2, y2 = item.points_list[0]
-            except:
-                x2, y2 = item.points_list[0].center
-            try:
-                x1, y1 = item.points_list[1]
-            except:
-                x1, y1 = item.points_list[1].center
+            x2, y2 = self.get_center_from_point(item.points_list[0])
+            x1, y1 = self.get_center_from_point(item.points_list[1])
             self.fond.coords(item.id_list[0], x1, y1, x2, y2)
-            if item.get_input():
-                item.active = item.get_input().active
+
+            if item.get_output():
+                # Permet d'afficher le lien en rouge lorsque la node d'entrée est active
+                item.active = item.get_output().active
             for link_seg_id in item.id_list:
                 self.fond.itemconfig(link_seg_id, fill = "red" if item.active else "white")
             self.fond.tag_lower(item.id_list[-1])
 
-        elif Node in target_class or Output_node in target_class or Input_node in target_class:
-            #c'est une node
-            if item.get_type() in ("main_output", "input") and not item.prev:
-                item.active = False
+        elif type(item) in (Input_node, Output_node, Main_input_node, Main_output_node):
             x, y = item.center
             self.fond.coords(item.id, x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE)
             self.fond.itemconfig(item.id, fill = "red" if item.active else "white")
             self.fond.coords(item.text, x, y)
 
+            # On update les liens avant et après la node
             for link in item.next_links:
                 self.update(link)
             if item.prev_link:
                 self.update(item.prev_link)
 
         else:
-            #c'est une gate
             if item.name != "MAIN":
-                #c'est une gate normale
+                # c'est une gate normale
                 x, y = item.center
                 dx, dy = item.delta_x, item.delta_y
                 self.fond.coords(item.id, x - gb.BOX_WIDTH, y - item.height, x + gb.BOX_WIDTH, y + item.height)
@@ -297,36 +303,6 @@ class Window(Tk):
                 self.update(node)
             for node in item.outputs:
                 self.update(node)
-
-    ######################### ADD/REMOVE INPUTS/OUTPUTS #########################
-    def add_input(self, evt):
-        if gb.DEBUG:print("Ajout d'une node input")
-        node = self.main_gate.add_input()
-        id = self.draw_node(node)
-        node.id = id
-        self.update(self.main_gate)
-    def remove_input(self, evt):
-        if gb.DEBUG:print("Retrait d'une node input")
-        node = self.main_gate.remove_input()
-        if node is not None:
-            self.fond.delete(node.id)
-            self.fond.delete(node.text)
-            self.update(self.main_gate)
-    def add_output(self, evt):
-        if gb.DEBUG:print("Ajout d'une node output")
-        node = self.main_gate.add_output()
-        id = self.draw_node(node)
-        node.id = id
-        self.update(self.main_gate)
-    def remove_output(self, evt):
-        if gb.DEBUG:print("Retrait d'une node output")
-        node = self.main_gate.remove_output()
-        if node is not None:
-            self.fond.delete(node.id)
-            self.fond.delete(node.text)
-            self.update(self.main_gate)
-
-
 
 
 

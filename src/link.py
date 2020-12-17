@@ -3,6 +3,7 @@ import src.globals as gb
 
 class Link:
     def __init__(self, node1):
+        self.id_list = []
         self.node1 = node1
         self.points_list = [node1, node1]
         self.active = False
@@ -32,13 +33,12 @@ class Link:
             self.node1, self.node2 = self.node2, self.node1
             self.delete()
 
-    def get_input(self):
-        if type(self.node1) == nd.Input_node or type(self.node1) == nd.Main_output_node:
+    def get_output(self):
+        if type(self.node1) == nd.Output_node or type(self.node1) == nd.Main_input_node:
             return self.node1
         else:
             return self.node2
 
     def r_clic(self, evt):
         self.points_list.append(self.points_list[-1])
-        id = self.node1.fen.draw_link(self)
-        self.id_list += [id]
+        self.node1.fen.draw_link(self)

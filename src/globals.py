@@ -3,7 +3,9 @@ WINDOW_WIDTH = 1800
 WINDOW_HEIGHT = 1000
 WINDOW_BG = "#303030"
 
-DEBUG = 0
+DEBUG = 1
+def debug(txt):
+    if DEBUG:print(txt)
 
 UPDATE_ID = 1
 def PRE_UPDATE():

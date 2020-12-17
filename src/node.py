@@ -3,20 +3,23 @@ from src.link import Link
 import src.gate as gt
 
 class Node:
-    def __init__(self, center, gate, fen=None):
+    def __init__(self, gate, fen=None):
         gb.NODE_NUMBER += 1
         self.last_update = 0
         self.id = None
         self.fen = fen
         self.active = False
         self.gate = gate
-        self.center = center
+        self.center = (0, 0)
         # self.nodes représente les nodes auquelles elle est connectée
         # pour une input_node, il ne peut y avoir au plus qu'une seule node
         self.next = set()
         self.prev = None
         self.next_links = set()
         self.prev_link = None
+
+    def destroy(self, evt = None):
+        self.delete()
 
     def is_hidden(self):
         return False
@@ -30,9 +33,11 @@ class Node:
                 for input in self.gate.inputs:
                     input.need_previous()
                 self.gate.evaluate()
-            if self.prev:
+            elif self.prev:
                 self.prev.need_previous()
                 self.active = self.prev.active
+            else:
+                self.active = False
         if not self.is_hidden():
             self.fen.update(self)
 
@@ -49,8 +54,7 @@ class Node:
             if gb.DEBUG:print("Initialisation d'un lien")
             #Création d'un nouveau lien
             link = Link(self)
-            id = self.fen.draw_link(link)
-            link.id_list = [id]
+            self.fen.draw_link(link)
             self.fen.link = link
         else:
             if (self.fen.link.node1.get_type(), self.get_type()) in (
@@ -114,7 +118,7 @@ class Input_node(Node):
         """
         self.delete(None)
 
-    def delete(self, evt):
+    def delete(self, evt = None):
         """
         La suppression pour ne node input doit efface tous les liens précédents
         """
@@ -165,7 +169,7 @@ class Output_node(Node):
         """
         pass
 
-    def delete(self, evt):
+    def delete(self, evt = None):
         """
         La suppression pour ne node output doit efface tous les liens suivants
         """
@@ -228,16 +232,20 @@ class Main_output_node(Input_node):
         """
         debug(self)
         self.fen.update(self)
-        pass
     def clic(self, evt):
-        if gb.DEBUG:print("_____________________________________________")
-        pass
+        gb.debug("_____________________________________________")
 
     def __repr__(self):
         if self.prev:
             return("Node:main_output:{}:{}\n".format(self.id, self.prev.id))
         else:
             return("Node:main_output:{}:\n".format(self.id))
+
+    def destroy(self, evt):
+        self.delete() # ne détruit que les liens
+        self.fen.fond.delete(self.id)
+        self.fen.fond.delete(self.text)
+        self.gate.outputs.pop(self.gate.outputs.index(self))
 
 class Main_input_node(Output_node):
     def need_previous(self):
@@ -259,5 +267,11 @@ class Main_input_node(Output_node):
         next_to_string = next_to_string[:-1]
         return("Node:main_input:{}:{}\n".format(self.id, next_to_string))
 
+    def destroy(self, evt):
+        self.delete() # ne détruit que les liens
+        self.fen.fond.delete(self.id)
+        self.fen.fond.delete(self.text)
+        self.gate.inputs.pop(self.gate.inputs.index(self))
+
 def debug(node):
-        if gb.DEBUG:print("[NEED] {} {} {} id = {}".format(node.get_type(), node.gate.name, node.active, node.id))
+    gb.debug("[NEED] {} {} {} id = {}".format(node.get_type(), node.gate.name, node.active, node.id))

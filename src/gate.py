@@ -6,19 +6,16 @@ import src.globals as gb
 class Gate:
     def __init__(self, inputs, outputs):
         gb.GATE_NUMBER += 1
+        self.center = (gb.WINDOW_WIDTH / 2, gb.WINDOW_HEIGHT / 2)
         self.inputs = inputs
         self.outputs = outputs
-        self.height = max(len(self.inputs), len(self.outputs)) * (2 * gb.NODE_SIZE + 10) / 2
+        self.height = max(len(self.inputs), len(self.outputs)) * (2 * gb.NODE_SIZE + 5) / 2
         self.delta_x, self.delta_y = 0, 0
 
     def delete(self, evt):
-        if gb.DEBUG:print("Suppression de la gate : {}".format(self.id))
+        gb.debug("Suppression de la gate : {}".format(self.id))
         self.fen.gates.remove(self)
-        for node in self.inputs:
-            node.delete(evt) # ne détruit que les liens
-            self.fen.fond.delete(node.id)
-            self.fen.fond.delete(node.text)
-        for node in self.outputs:
+        for node in self.inputs + self.outputs:
             node.delete(evt) # ne détruit que les liens
             self.fen.fond.delete(node.id)
             self.fen.fond.delete(node.text)
@@ -28,16 +25,16 @@ class Gate:
     def update_nodes_coords(self):
         x = self.center[0] - gb.BOX_WIDTH
         for i, node in enumerate(self.inputs):
-            y = self.center[1] + (2 * gb.NODE_SIZE + 10) * i - (len(self.inputs) - 1) * (2 * gb.NODE_SIZE + 10) / 2
+            y = self.center[1] + (2 * gb.NODE_SIZE + 5) * i - (len(self.inputs) - 1) * (2 * gb.NODE_SIZE + 5) / 2
             node.update_center((x, y))
         x = self.center[0] + gb.BOX_WIDTH
         for i, node in enumerate(self.outputs):
-            y = self.center[1] + (2 * gb.NODE_SIZE + 10) * i - (len(self.outputs) - 1) * (2 * gb.NODE_SIZE + 10) / 2
+            y = self.center[1] + (2 * gb.NODE_SIZE + 5) * i - (len(self.outputs) - 1) * (2 * gb.NODE_SIZE + 5) / 2
             node.update_center((x, y))
 
 
     def evaluate(self):
-        if gb.DEBUG:print("Evaluation initialisée sur la gate {} : {}".format(self.name, self.id))
+        gb.debug("Evaluation initialisée sur la gate {} : {}".format(self.name, self.id))
         """
         ATTENTION : UTILISEE QU'A L'INITIALISATION DE LA GATE
         """
@@ -46,7 +43,7 @@ class Gate:
             output_node.need_previous()
 
     def clic(self, evt):
-        if gb.DEBUG:print("clic on box with id = {}".format(self.id))
+        gb.debug("clic on box with id = {}".format(self.id))
         self.fen.selected = self
         self.delta_x, self.delta_y = self.center[0] - evt.x, self.center[1] - evt.y
 
@@ -64,103 +61,25 @@ class New_gate(Gate):
     """
     Permet de précharger une gate
     """
-    def __init__(self, fen, center, name):
+    def __init__(self, fen, name):
         self.id = None
         self.fen = fen
-        self.center = center
         self.name = name
 
 class And_gate(Gate):
-    def __init__(self, fen, center):
+    def __init__(self, fen):
         self.fen = fen
-        self.center = center
+        self.center = (gb.WINDOW_WIDTH / 2, gb.WINDOW_HEIGHT / 2)
         self.name = "AND"
 
     def evaluate(self):
         self.outputs[0].active = self.inputs[0].active and self.inputs[1].active
 
 class Not_gate(Gate):
-    def __init__(self, fen, center):
+    def __init__(self, fen):
         self.fen = fen
-        self.center = center
+        self.center = (gb.WINDOW_WIDTH / 2, gb.WINDOW_HEIGHT / 2)
         self.name = "NOT"
 
     def evaluate(self):
         self.outputs[0].active = not self.inputs[0].active
-
-
-class Current_gate(Gate):
-    """
-    Decrit l'intérieur de la box en construction
-    """
-    def __init__(self, fen):
-        """
-        initialise une box vide : pas d'entrées, pas de sorties
-        """
-        self.fen = fen
-        self.inputs = [] # liste des nodes d'entrée
-        self.outputs = [] # liste des nodes de sortie
-
-    def update_centers(self, target):
-        """
-        Change la position des nodes pour l'ajout (change = 1)
-        ou la suppression (change = -1) d'une node
-        """
-        taille = len(target)
-        x = 50 * (target is self.inputs) + (gb.WINDOW_WIDTH - 50) * (target is self.outputs)
-        for i, node in enumerate(target):
-            y = gb.WINDOW_HEIGHT / 2 + 70 * i - (taille - 1)  * 35
-            node.update_center((x, y))
-
-    def add_input(self):
-        """
-        Ajoute une entrée : fixe sa valeur à false
-        Renvoie la node ajoutée
-        """
-        node = Main_input_node((0, 0), self, self.fen)
-        self.inputs += [node]
-        self.update_centers(self.inputs)
-        return node
-
-    def remove_input(self):
-        """
-        retire la dernire entrée saisie
-        Renvoie la node supprimée
-        """
-        if not self.inputs:
-            return None
-        node = self.inputs.pop(-1)
-        node.delete(None)
-        self.update_centers(self.inputs)
-        return node
-
-    def add_output(self):
-        """
-        Ajoute une sortie
-        Renvoie la node ajoutée
-        """
-        node = Main_output_node((0, 0), self, self.fen)
-        self.outputs += [node]
-        self.update_centers(self.outputs)
-        return node
-
-    def remove_output(self):
-        """
-        retire la dernire sortie saisie
-        Renvoie la node supprimée
-        """
-        if not self.outputs:
-            return None
-        node = self.outputs.pop(-1)
-        node.delete(None)
-        self.update_centers(self.outputs)
-        return node
-
-    def evaluate(self):
-        if gb.DEBUG:print("Initialisation de l'évaluation générale")
-        """
-        Calcule la sortie en fonction de l'entrée
-        """
-
-        for output_node in self.inputs:
-            output_node.push()

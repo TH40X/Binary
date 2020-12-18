@@ -13,7 +13,6 @@ class Node:
         self.center = (0, 0)
         # self.nodes représente les nodes auquelles elle est connectée
         # pour une input_node, il ne peut y avoir au plus qu'une seule node
-        self.next = set()
         self.prev = None
         self.next_links = set()
         self.prev_link = None
@@ -45,6 +44,9 @@ class Node:
         self.center = center
 
     def clic(self, evt):
+        """
+        Ne fait rien mais doit etre déclaré car utilisé par les main_in/output
+        """
         if gb.DEBUG:print("clic on node with id = {}".format(self.id))
 
     def r_clic(self, evt):
@@ -73,37 +75,9 @@ class Input_node(Node):
     def get_type(self):
         return("input")
 
-    def push(self):
-        """
-        Si la box auquelle la node appartient est à jour, on push les node de sortie
-        A la fin du push, on update la node, ainsi, les nodes sont update en cascade
-        """
-        if self.last_update < gb.UPDATE_ID:
-            self.last_update = gb.UPDATE_ID
-        else:
-            return
-        debug(self)
-
-        if type(self.gate) in (gt.And_gate, gt.Not_gate):
-            self.gate.evaluate()
-            for node in self.gate.outputs:
-                node.push()
-            return
-
-        if not self.prev:
-            self.active = False
-        if not self.next:
-            if gb.DEBUG:print("pas de lien à exploiter")
-        else:
-            for node in self.next:
-                node.active = self.active
-                node.push()
-        self.fen.update(self)
-
     def link_to(self):
         self.prev = self.fen.link.node1
         self.prev_link = self.fen.link
-        self.prev.next.add(self)
         self.prev.next_links.add(self.fen.link)
         self.fen.update(self.prev)
         #Après l'ajout d'un lien, on update avec un push
@@ -129,39 +103,19 @@ class Input_node(Node):
         if self.prev:
             return("Node:input:{}:{}\n".format(self.id, self.prev.id))
         else:
-            return("Node:input:{}:\n".format(self.id))
+            return("Node:input:{}:0\n".format(self.id))
 
 class Output_node(Node):
     def get_type(self):
         return("output")
 
-    def push(self):
-        """
-        Envoie la valeur vers les nodes suivantes
-        """
-
-        debug(self)
-        if not self.next:
-            if gb.DEBUG:print("pas de lien à exploiter")
-            # pas de lien qui part de cette node
-        else:
-            for node in self.next:
-                node.active = self.active
-                node.push()
-        #fin du push, on update l'affichage
-        self.fen.update(self)
-
     def link_to(self):
-        self.next.add(self.fen.link.node1)
         self.next_links.add(self.fen.link)
         self.fen.link.node1.prev = self
         self.fen.link.node1.prev_link = self.fen.link
         self.fen.update(self)
         #Après l'ajout d'un lien, on update avec un push
         gb.PRE_UPDATE()
-        for next in self.next:
-            self.need_previous()
-        # self.push()
 
     def destroy_old_input(self):
         """
@@ -177,61 +131,19 @@ class Output_node(Node):
             link.delete()
 
     def __repr__(self):
-        next_to_string = ""
-        for next in self.next:
-            next_to_string += "{},".format(next.id)
-        next_to_string = next_to_string[:-1]
-        return("Node:output:{}:{}\n".format(self.id, next_to_string))
+        return("Node:output:{}:0\n".format(self.id))
 
 class Hidden_input_node(Input_node):
     def is_hidden(self):
         return True
-    def push(self):
-        """
-        Push une node : ne fait pas d'update d'affichage
-        """
-        if self.last_update < gb.UPDATE_ID:
-            self.last_update = gb.UPDATE_ID
-        else:
-            return
-
-        debug(self)
-        if type(self.gate) in (gt.And_gate, gt.Not_gate):
-            self.gate.evaluate()
-            for node in self.gate.outputs:
-                node.push()
-            return
-
-        if not self.prev:
-            self.active = False
-        if not self.next:
-            if gb.DEBUG:print("pas de lien à exploiter")
-        else:
-            for node in self.next:
-                node.active = self.active
-                node.push()
 
 class Hidden_output_node(Output_node):
     def is_hidden(self):
         return True
-    def push(self):
-        """
-        Push une node : ne fait pas d'update d'affichage
-        """
-
-        debug(self)
-        if self.next:
-            for node in self.next:
-                node.active = self.active
-                node.push()
 
 class Main_output_node(Input_node):
-    def push(self):
-        """
-        Ne doit rien faire, car c'est les nodes de sortie
-        """
-        debug(self)
-        self.fen.update(self)
+    def get_type(self):
+        return("main_output")
     def clic(self, evt):
         gb.debug("_____________________________________________")
 
@@ -239,7 +151,7 @@ class Main_output_node(Input_node):
         if self.prev:
             return("Node:main_output:{}:{}\n".format(self.id, self.prev.id))
         else:
-            return("Node:main_output:{}:\n".format(self.id))
+            return("Node:main_output:{}:0\n".format(self.id))
 
     def destroy(self, evt):
         self.delete() # ne détruit que les liens
@@ -261,11 +173,7 @@ class Main_input_node(Output_node):
         self.fen.update_all()
 
     def __repr__(self):
-        next_to_string = ""
-        for next in self.next:
-            next_to_string += "{},".format(next.id)
-        next_to_string = next_to_string[:-1]
-        return("Node:main_input:{}:{}\n".format(self.id, next_to_string))
+        return("Node:main_input:{}:0\n".format(self.id))
 
     def destroy(self, evt):
         self.delete() # ne détruit que les liens

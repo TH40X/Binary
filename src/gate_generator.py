@@ -73,12 +73,10 @@ def update_links(data, nodes):
         if element == "Node":
             node = nodes[int(id)]
             for other_id in target.split(","):
-                other_node = nodes[int(other_id)]
-                if name in ("input", "main_output"):
-                    node.prev = other_node
-                elif name in ("output", "main_input"):
-                    gb.debug("SOUS output_node {} reliée vers la node {}".format(id, other_id))
-                    node.next.add(other_node)
+                if int(other_id):
+                    other_node = nodes[int(other_id)]
+                    if name in ("input", "main_output"):
+                        node.prev = other_node
 
 def gate_from_and(fen):
     """
@@ -147,7 +145,5 @@ class Generator:
 
         update_links(data, nodes)
 
-        gb.debug(final_inputs[0].next)
-        gb.debug(final_inputs[1].next)
         Gate.__init__(final_gate, final_inputs, final_outputs)
         update_gate_aff(self.fen, final_gate)

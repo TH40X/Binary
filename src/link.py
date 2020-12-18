@@ -24,7 +24,6 @@ class Link:
             self.node1.prev = None
             self.node1.prev_link = None
             # Supprime node1 de la node précédente
-            self.node2.next.remove(self.node1)
             self.node2.next_links.remove(self)
             # Supprime l'affichage du lien
             self.delete_aff()

@@ -24,9 +24,8 @@ class Window(Tk):
     def __init__(self):
         # INIT WINDOW
         Tk.__init__(self)
-        self.attributes("-topmost", True)
         self.geometry("{}x{}+10+10".format(gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT + 50))
-        self.fond = Canvas(self, width = gb.WINDOW_WIDTH, height = gb.WINDOW_HEIGHT + 50, bg = gb.WINDOW_BG)
+        self.fond = Canvas(self, width = gb.WINDOW_WIDTH, height = gb.WINDOW_HEIGHT + 100, bg = gb.WINDOW_BG)
         self.fond.pack()
         self.init_input_output()
 
@@ -114,8 +113,11 @@ class Window(Tk):
     ######################### GATE GENERATOR #########################
     def load_below_gates(self):
         for i, gate_name in enumerate(os.listdir("lib/structs/")):
-            x = i * 120 + 10
+            x = i * 110 + 20
             y = gb.WINDOW_HEIGHT + 25
+            if i > 16:
+                x = (i - 17) * 110 + 20
+                y = gb.WINDOW_HEIGHT + 70
             generator = Generator(gate_name, self)
             self.generators.add(generator)
             generator.id = self.fond.create_rectangle(x, y - 20, x + 100, y + 20, width = 2, fill = "gray")
@@ -207,6 +209,10 @@ class Window(Tk):
         self.fond.tag_bind(node.text, "<Button-1>", node.clic)
         self.fond.tag_bind(node.text, "<Button-3>", node.r_clic)
         self.fond.tag_bind(node.text, "<Button-2>", node.destroy)
+        if node.get_type() not in ("main_input", "main_output"):
+            self.fond.tag_bind(node.text, "<Button-1>", node.gate.clic)
+            self.fond.tag_bind(node.id, "<Button-1>", node.gate.clic)
+
 
     def draw_gate(self, gate):
         """
@@ -224,7 +230,6 @@ class Window(Tk):
             self.draw_node(node)
         for node in gate.outputs:
             self.draw_node(node)
-        return id
 
     ######################### UPDATE DISPLAY #########################
     def update_all(self):

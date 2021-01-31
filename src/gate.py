@@ -9,7 +9,7 @@ class Gate:
         self.center = (gb.WINDOW_WIDTH / 2, gb.WINDOW_HEIGHT / 2)
         self.inputs = inputs
         self.outputs = outputs
-        self.height = max(len(self.inputs), len(self.outputs)) * (2 * gb.NODE_SIZE + 5) / 2
+        self.width = max(len(self.inputs), len(self.outputs)) * (2 * gb.NODE_SIZE) / 2
         self.delta_x, self.delta_y = 0, 0
 
     def delete(self, evt):
@@ -18,18 +18,19 @@ class Gate:
         for node in self.inputs + self.outputs:
             node.delete(evt) # ne détruit que les liens
             self.fen.fond.delete(node.id)
-            self.fen.fond.delete(node.text)
+            if gb.DEBUG:
+                self.fen.fond.delete(node.text)
         self.fen.fond.delete(self.id)
         self.fen.fond.delete(self.name_id)
 
     def update_nodes_coords(self):
-        x = self.center[0] - gb.BOX_WIDTH
+        y = self.center[1] - gb.BOX_HEIGHT
         for i, node in enumerate(self.inputs):
-            y = self.center[1] + (2 * gb.NODE_SIZE + 5) * i - (len(self.inputs) - 1) * (2 * gb.NODE_SIZE + 5) / 2
+            x = self.center[0] + (2 * gb.NODE_SIZE) * i - (len(self.inputs) - 1) * (2 * gb.NODE_SIZE) / 2
             node.update_center((x, y))
-        x = self.center[0] + gb.BOX_WIDTH
+        y = self.center[1] + gb.BOX_HEIGHT
         for i, node in enumerate(self.outputs):
-            y = self.center[1] + (2 * gb.NODE_SIZE + 5) * i - (len(self.outputs) - 1) * (2 * gb.NODE_SIZE + 5) / 2
+            x = self.center[0] + (2 * gb.NODE_SIZE) * i - (len(self.outputs) - 1) * (2 * gb.NODE_SIZE) / 2
             node.update_center((x, y))
 
 

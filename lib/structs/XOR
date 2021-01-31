@@ -1,0 +1,15 @@
+Gate:OR:169,170:171
+Gate:NAND:174,175:176
+Gate:AND:179,180:181
+Node:main_input:12:0
+Node:main_input:13:0
+Node:main_output:33:181
+Node:input:169:12
+Node:input:170:13
+Node:output:171:0
+Node:input:174:12
+Node:input:175:13
+Node:output:176:0
+Node:input:179:176
+Node:input:180:171
+Node:output:181:0

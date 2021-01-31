@@ -156,7 +156,8 @@ class Main_output_node(Input_node):
     def destroy(self, evt):
         self.delete() # ne détruit que les liens
         self.fen.fond.delete(self.id)
-        self.fen.fond.delete(self.text)
+        if gb.DEBUG:
+            self.fen.fond.delete(self.text)
         self.gate.outputs.pop(self.gate.outputs.index(self))
 
 class Main_input_node(Output_node):
@@ -178,7 +179,8 @@ class Main_input_node(Output_node):
     def destroy(self, evt):
         self.delete() # ne détruit que les liens
         self.fen.fond.delete(self.id)
-        self.fen.fond.delete(self.text)
+        if gb.DEBUG:
+            self.fen.fond.delete(self.text)
         self.gate.inputs.pop(self.gate.inputs.index(self))
 
 def debug(node):

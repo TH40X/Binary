@@ -8,10 +8,10 @@ from src.link import Link
 
 
 def GB_INFO(evt):
-    print("____________________________________________")
-    print("Nombre totale de portes créées : {}".format(gb.GATE_NUMBER))
-    print("Nombre totale de node créées : {}".format(gb.NODE_NUMBER))
-    print("Nombre de nodes mises à jour sur la dernière update : {}".format(gb.UPDATE_NUMBER))
+    gb.debug("____________________________________________")
+    gb.debug("Nombre totale de portes créées : {}".format(gb.GATE_NUMBER))
+    gb.debug("Nombre totale de node créées : {}".format(gb.NODE_NUMBER))
+    gb.debug("Nombre de nodes mises à jour sur la dernière update : {}".format(gb.UPDATE_NUMBER))
 
 def reverse_find(dic, value):
     for key in dic:
@@ -24,8 +24,8 @@ class Window(Tk):
     def __init__(self):
         # INIT WINDOW
         Tk.__init__(self)
-        self.geometry("{}x{}+10+10".format(gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT + 50))
-        self.fond = Canvas(self, width = gb.WINDOW_WIDTH, height = gb.WINDOW_HEIGHT + 100, bg = gb.WINDOW_BG)
+        self.geometry("{}x{}+10+10".format(gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT + 30))
+        self.fond = Canvas(self, width = gb.WINDOW_WIDTH, height = gb.WINDOW_HEIGHT + 30, bg = gb.WINDOW_BG)
         self.fond.pack()
         self.init_input_output()
 
@@ -36,13 +36,19 @@ class Window(Tk):
         self.selected = None
         self.link = None
         self.generators = set()
+        self.gate_gen_x = 0
+        self.max_gate_gen_x = 0
 
         # BINDINGS
         self.bindings = {"<Control-Key-s>" : self.save_conf_name,
                          "<Motion>" : self.move,
                          "<ButtonRelease-1>" : self.release_clic,
                          "<Button-2>" : self.cancel_link,
-                         "<Button-1>" : GB_INFO}
+                         "<Button-1>" : GB_INFO,
+                         "<MouseWheel>" : self.scroll, # for windows
+                         "<Button-4>" : self.scroll, # for linux
+                         "<Button-5>" : self.scroll # for linux
+                         }
         self.enable_bindings()
 
         # LOAD GATES
@@ -53,21 +59,33 @@ class Window(Tk):
 
     ######################### INPUT/OUTPUT #########################
     def init_input_output(self):
-        self.input_line = self.fond.create_rectangle(0, 0, 50, gb.WINDOW_HEIGHT, width = 10, fill = "black")
+        self.input_line = self.fond.create_rectangle(0, gb.INPUT_HEIGHT, gb.WINDOW_WIDTH, gb.INPUT_HEIGHT, width = 20, fill = "black")
         self.fond.tag_bind(self.input_line, "<Button-1>", self.add_input)
-        self.output_line = self.fond.create_rectangle(gb.WINDOW_WIDTH - 50, 0, gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT, width = 10, fill = "black")
+        self.output_line = self.fond.create_rectangle(0, gb.WINDOW_HEIGHT, gb.WINDOW_WIDTH, gb.WINDOW_HEIGHT, width = 20, fill = "black")
         self.fond.tag_bind(self.output_line, "<Button-1>", self.add_output)
 
     def add_input(self, evt):
         node = Main_input_node(self.main_gate, self)
-        node.center = (50, evt.y)
+        node.center = (evt.x, gb.INPUT_HEIGHT)
+        for other_node in self.main_gate.inputs:
+            if abs(other_node.center[0] - node.center[0]) < 2 * gb.NODE_SIZE:
+                if other_node.center[0] < node.center[0]:
+                    node.center = (other_node.center[0] + 2 * gb.NODE_SIZE, node.center[1])
+                else:
+                    node.center = (other_node.center[0] - 2 * gb.NODE_SIZE, node.center[1])
         self.main_gate.inputs += [node]
         self.draw_node(node)
         self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
 
     def add_output(self, evt):
         node = Main_output_node(self.main_gate, self)
-        node.center = (gb.WINDOW_WIDTH - 50, evt.y)
+        node.center = (evt.x, gb.WINDOW_HEIGHT)
+        for other_node in self.main_gate.outputs:
+            if abs(other_node.center[0] - node.center[0]) < 2 * gb.NODE_SIZE:
+                if other_node.center[0] < node.center[0]:
+                    node.center = (other_node.center[0] + 2 * gb.NODE_SIZE, node.center[1])
+                else:
+                    node.center = (other_node.center[0] - 2 * gb.NODE_SIZE, node.center[1])
         self.main_gate.outputs += [node]
         self.draw_node(node)
         self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
@@ -113,23 +131,34 @@ class Window(Tk):
     ######################### GATE GENERATOR #########################
     def load_below_gates(self):
         for i, gate_name in enumerate(os.listdir("lib/structs/")):
-            x = i * 110 + 20
-            y = gb.WINDOW_HEIGHT + 25
-            if i > 16:
-                x = (i - 17) * 110 + 20
-                y = gb.WINDOW_HEIGHT + 70
+            x = i * 110 + 10 + self.gate_gen_x
+            y = gb.INPUT_HEIGHT / 2 - 5
             generator = Generator(gate_name, self)
             self.generators.add(generator)
-            generator.id = self.fond.create_rectangle(x, y - 20, x + 100, y + 20, width = 2, fill = "gray")
+            generator.id = self.fond.create_rectangle(x, y - 20, x + 100, y + 20, width = 2, fill = gb.BOX_BG)
             generator.name_id = self.fond.create_text(x + 50, y, text = gate_name)
             self.fond.tag_bind(generator.id, "<Button-1>", generator.create_gate)
             self.fond.tag_bind(generator.name_id, "<Button-1>", generator.create_gate)
+        self.max_gate_gen_x = x
 
     def reload_below_gate(self):
         for generator in self.generators:
             self.fond.delete(generator.id)
             self.fond.delete(generator.name_id)
         self.load_below_gates()
+
+    def scroll(self, evt):
+        if evt.delta != 0: # for windows
+            self.gate_gen_x += evt.delta / 30
+        if evt.num == 4: # for linux
+            self.gate_gen_x += 30
+            self.gate_gen_x = min(self.gate_gen_x, 0)
+        if evt.num == 5: # for linux
+            self.gate_gen_x -= 30
+            delta = self.max_gate_gen_x - gb.WINDOW_WIDTH + 100
+            if delta < 0:
+                self.gate_gen_x += 30
+        self.reload_below_gate()
 
     ######################### SAVING CONFIGURATION #########################
     def save_conf_name(self, evt):
@@ -205,12 +234,14 @@ class Window(Tk):
         self.fond.tag_bind(node.id, "<Button-1>", node.clic)
         self.fond.tag_bind(node.id, "<Button-3>", node.r_clic)
         self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
-        node.text = self.fond.create_text(x, y, text = str(node.id))
-        self.fond.tag_bind(node.text, "<Button-1>", node.clic)
-        self.fond.tag_bind(node.text, "<Button-3>", node.r_clic)
-        self.fond.tag_bind(node.text, "<Button-2>", node.destroy)
+        if gb.DEBUG:
+            node.text = self.fond.create_text(x, y, text = str(node.id))
+            self.fond.tag_bind(node.text, "<Button-1>", node.clic)
+            self.fond.tag_bind(node.text, "<Button-3>", node.r_clic)
+            self.fond.tag_bind(node.text, "<Button-2>", node.destroy)
         if node.get_type() not in ("main_input", "main_output"):
-            self.fond.tag_bind(node.text, "<Button-1>", node.gate.clic)
+            if gb.DEBUG:
+                self.fond.tag_bind(node.text, "<Button-1>", node.gate.clic)
             self.fond.tag_bind(node.id, "<Button-1>", node.gate.clic)
 
 
@@ -219,7 +250,7 @@ class Window(Tk):
         Affiche une gate et les nodes associées
         """
         x, y = gate.center
-        gate.id = self.fond.create_rectangle(x - gb.BOX_WIDTH, y - gate.height, x + gb.BOX_WIDTH, y + gate.height, outline = "black", fill = "gray", width = 3)
+        gate.id = self.fond.create_rectangle(x - gate.width, y - gb.BOX_HEIGHT, x + gate.width, y + gb.BOX_HEIGHT, outline = "black", fill = gb.BOX_BG, width = 3)
         self.fond.tag_bind(gate.id, "<Button-1>", gate.clic)
         self.fond.tag_bind(gate.id, "<Button-2>", gate.delete)
         gate.name_id = self.fond.create_text(x, y, text = gate.name)
@@ -288,7 +319,8 @@ class Window(Tk):
             x, y = item.center
             self.fond.coords(item.id, x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE)
             self.fond.itemconfig(item.id, fill = "red" if item.active else "white")
-            self.fond.coords(item.text, x, y)
+            if gb.DEBUG:
+                self.fond.coords(item.text, x, y)
 
             # On update les liens avant et après la node
             for link in item.next_links:
@@ -301,7 +333,7 @@ class Window(Tk):
                 # c'est une gate normale
                 x, y = item.center
                 dx, dy = item.delta_x, item.delta_y
-                self.fond.coords(item.id, x - gb.BOX_WIDTH, y - item.height, x + gb.BOX_WIDTH, y + item.height)
+                self.fond.coords(item.id, x - item.width, y - gb.BOX_HEIGHT, x + item.width, y + gb.BOX_HEIGHT)
                 self.fond.coords(item.name_id, x, y)
 
             for node in item.inputs:

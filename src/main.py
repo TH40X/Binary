@@ -112,11 +112,20 @@ class Window(Tk):
 
     ######################### GATE GENERATOR #########################
     def load_below_gates(self):
-        for i, gate_name in enumerate(os.listdir("lib/structs/")):
+        for i, brick in enumerate(("NOT", "AND")):
             x = i * 110 + 20
             y = gb.WINDOW_HEIGHT + 25
-            if i > 16:
-                x = (i - 17) * 110 + 20
+            generator = Generator(brick, self)
+            self.generators.add(generator)
+            generator.id = self.fond.create_rectangle(x, y - 20, x + 100, y + 20, width = 2, fill = "gray")
+            generator.name_id = self.fond.create_text(x + 50, y, text = brick)
+            self.fond.tag_bind(generator.id, "<Button-1>", generator.create_gate)
+            self.fond.tag_bind(generator.name_id, "<Button-1>", generator.create_gate)
+        for i, gate_name in enumerate(os.listdir("lib/env/")):
+            x = (i + 2) * 110 + 20
+            y = gb.WINDOW_HEIGHT + 25
+            if i > 14:
+                x = (i - 15) * 110 + 20
                 y = gb.WINDOW_HEIGHT + 70
             generator = Generator(gate_name, self)
             self.generators.add(generator)
@@ -149,8 +158,8 @@ class Window(Tk):
         self.clean_save_conf()
 
     def save_conf(self, evt):
-        if not self.gate_name in os.listdir("lib/structs/"):
-            with open("lib/structs/" + self.gate_name, "w") as f:
+        if not self.gate_name in os.listdir("lib/env/"):
+            with open("lib/env/" + self.gate_name, "w") as f:
                 # Ajoute les gate au fichier
                 for gate in self.gates:
                     f.write(str(gate))

@@ -1,0 +1,14 @@
+Gate:D LATCH:4941,4942:4943
+Gate:D LATCH:4936,4937:4938
+Gate:NOT:4946:4947
+Node:main_input:2950:0
+Node:main_input:2951:0
+Node:main_output:2952:4938
+Node:input:4941:4947
+Node:input:4942:2951
+Node:output:4943:0
+Node:input:4936:2950
+Node:input:4937:4943
+Node:output:4938:0
+Node:input:4946:2950
+Node:output:4947:0

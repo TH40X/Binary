@@ -1,0 +1,23 @@
+Gate:NOT:4091:4092
+Gate:AND:3481,3482:3483
+Gate:OR:3706,3707:3708
+Gate:FLIP FLOP:3300,3301:3302
+Gate:AND:3476,3477:3478
+Node:main_input:3295:0
+Node:main_input:3296:0
+Node:main_input:3297:0
+Node:main_output:3303:3302
+Node:input:4091:3296
+Node:output:4092:0
+Node:input:3481:3296
+Node:input:3482:3297
+Node:output:3483:0
+Node:input:3706:3483
+Node:input:3707:3478
+Node:output:3708:0
+Node:input:3300:3295
+Node:input:3301:3708
+Node:output:3302:0
+Node:input:3476:4092
+Node:input:3477:3302
+Node:output:3478:0

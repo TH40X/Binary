@@ -1,0 +1,17 @@
+Gate:OR:1135,1136:1137
+Gate:OR:1140,1141:1142
+Gate:OR:1130,1131:1132
+Node:main_input:1123:0
+Node:main_input:1124:0
+Node:main_input:1125:0
+Node:main_input:1126:0
+Node:main_output:1127:1132
+Node:input:1135:1125
+Node:input:1136:1126
+Node:output:1137:0
+Node:input:1140:1123
+Node:input:1141:1124
+Node:output:1142:0
+Node:input:1130:1142
+Node:input:1131:1137
+Node:output:1132:0

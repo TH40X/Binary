@@ -156,7 +156,8 @@ class Main_output_node(Input_node):
     def destroy(self, evt):
         self.delete() # ne détruit que les liens
         self.fen.fond.delete(self.id)
-        self.fen.fond.delete(self.text)
+        if gb.DEBUG:
+            self.fen.fond.delete(self.text)
         self.gate.outputs.pop(self.gate.outputs.index(self))
 
 class Main_input_node(Output_node):
@@ -178,8 +179,17 @@ class Main_input_node(Output_node):
     def destroy(self, evt):
         self.delete() # ne détruit que les liens
         self.fen.fond.delete(self.id)
-        self.fen.fond.delete(self.text)
+        if gb.DEBUG:
+            self.fen.fond.delete(self.text)
         self.gate.inputs.pop(self.gate.inputs.index(self))
+
+class Clock_node(Main_input_node):
+    """
+    Node de type clock : n'est utile que lors de la création de la gate, elle
+    reste une node de type "main_input" pour la sauvegarde de la gate
+    """
+    def get_type(self):
+        return("clock")
 
 def debug(node):
     gb.debug("[NEED] {} {} {} id = {}".format(node.get_type(), node.gate.name, node.active, node.id))

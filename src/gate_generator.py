@@ -38,7 +38,7 @@ def load_hidden_gate_from_line(nodes, line, fen):
 
 def gate_from_name(name, fen):
     gb.debug("Création d'une SOUS gate {}".format(name))
-    with open("lib/env/" + name, "r") as f:
+    with open("lib/structs/" + name, "r") as f:
         data = f.readlines()
 
     final_gate = New_gate(fen, name)
@@ -119,7 +119,7 @@ class Generator:
             gate_from_not(self.fen)
             return
 
-        with open("lib/env/" + self.gate_name, "r") as f:
+        with open("lib/structs/" + self.gate_name, "r") as f:
             data = f.readlines()
 
         final_gate = New_gate(self.fen, self.gate_name)

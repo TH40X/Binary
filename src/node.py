@@ -23,6 +23,9 @@ class Node:
     def is_hidden(self):
         return False
 
+    def get_sub_type(self):
+        return "simple"
+
     def need_previous(self):
         debug(self)
         if self.last_update < gb.UPDATE_ID:
@@ -183,13 +186,110 @@ class Main_input_node(Output_node):
             self.fen.fond.delete(self.text)
         self.gate.inputs.pop(self.gate.inputs.index(self))
 
+class Main_input_count_node(Main_input_node):
+    def get_sub_type(self):
+        return "count"
+
+    def add_ext_node(self, evt):
+        self.fen.fond.delete(self.ext_node_id)
+        self.fen.inout_pos = (self.center[0] + 1.7 * gb.NODE_SIZE, self.center[1])
+        new_node = self.fen.add_count_input(None)
+        new_node.master_node = self.master_node
+        self.master_node.node_amount += 1
+        self.next_node = new_node
+        self.master_node.update_value_display()
+
+    def update_value_display(self):
+        # on est forcément sur la node principale en entrant dans cette fonction
+        if hasattr(self, "value_text"):
+            x, y = self.center
+            x += ((self.node_amount - 1) * gb.NODE_SIZE * 1.7) / 2
+            self.fen.fond.itemconfig(self.value_text, text = str(self.get_value()))
+            self.fen.fond.coords(self.value_text, x, y - gb.NODE_SIZE * 2)
+        else:
+            x, y = self.center
+            self.value_text = self.fen.fond.create_text(x, y - gb.NODE_SIZE * 2, text = str(self.get_value()), fill = "#ffffff", font = ("Arial", 20))
+
+
+    def get_value(self):
+        tmp = self.master_node
+        pow = tmp.node_amount - 1
+        value = 0
+        while tmp:
+            value += int(tmp.active) * (2 ** pow)
+            pow -= 1
+            tmp = tmp.next_node
+        return value
+
+    def delete_ext(self, evt):
+        self.fen.fond.delete(self.ext_node_id)
+
+    def destroy_count(self, evt):
+        self.fen.fond.delete(self.master_node.value_text)
+        self.master_node.destroy(None)
+        next = self.master_node
+        while next.next_node:
+            next.next_node.destroy(None)
+            next = next.next_node
+        self.fen.fond.delete(next.ext_node_id)
+
+class Main_output_count_node(Main_output_node):
+    def get_sub_type(self):
+        return "count"
+
+    def add_ext_node(self, evt):
+        self.fen.fond.delete(self.ext_node_id)
+        self.fen.inout_pos = (self.center[0] + 1.7 * gb.NODE_SIZE, self.center[1])
+        new_node = self.fen.add_count_output(None)
+        new_node.master_node = self.master_node
+        self.master_node.node_amount += 1
+        self.next_node = new_node
+        self.master_node.update_value_display()
+
+    def update_value_display(self):
+        # on est forcément sur la node principale en entrant dans cette fonction
+        if hasattr(self, "value_text"):
+            x, y = self.center
+            x += ((self.node_amount - 1) * gb.NODE_SIZE * 1.7) / 2
+            self.fen.fond.itemconfig(self.value_text, text = str(self.get_value()))
+            self.fen.fond.coords(self.value_text, x, y + gb.NODE_SIZE * 2)
+        else:
+            x, y = self.center
+            self.value_text = self.fen.fond.create_text(x, y + gb.NODE_SIZE * 2, text = str(self.get_value()), fill = "#ffffff", font = ("Arial", 20))
+
+
+    def get_value(self):
+        tmp = self.master_node
+        pow = tmp.node_amount - 1
+        value = 0
+        while tmp:
+            value += int(tmp.active) * (2 ** pow)
+            pow -= 1
+            tmp = tmp.next_node
+        return value
+
+    def delete_ext(self, evt):
+        self.fen.fond.delete(self.ext_node_id)
+
+    def destroy_count(self, evt):
+        self.fen.fond.delete(self.master_node.value_text)
+        self.master_node.destroy(None)
+        next = self.master_node
+        while next.next_node:
+            next.next_node.destroy(None)
+            next = next.next_node
+        self.fen.fond.delete(next.ext_node_id)
+
 class Clock_node(Main_input_node):
     """
     Node de type clock : n'est utile que lors de la création de la gate, elle
     reste une node de type "main_input" pour la sauvegarde de la gate
     """
-    def get_type(self):
-        return("clock")
+    def need_previous(self):
+        if self.last_update != gb.UPDATE_ID:
+            self.last_update = gb.UPDATE_ID
+            self.active = not self.active
+            self.fen.update(self)
 
 def debug(node):
     gb.debug("[NEED] {} {} {} id = {}".format(node.get_type(), node.gate.name, node.active, node.id))

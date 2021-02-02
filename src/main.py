@@ -1,10 +1,11 @@
 from tkinter import Tk, Canvas
 import src.globals as gb
 from src.gate import And_gate, Not_gate, Gate, New_gate
-from src.node import Node, Input_node, Output_node, Main_input_node, Main_output_node
+from src.node import Node, Input_node, Output_node, Main_input_node, Main_output_node, Clock_node, Main_input_count_node, Main_output_count_node
 import os
 from src.gate_generator import Generator
 from src.link import Link
+import time
 
 
 def GB_INFO(evt):
@@ -119,15 +120,19 @@ class Window(Tk):
         self.clean_select()
 
     def add_count_input(self, evt):
-        node = Main_input_node(self.main_gate, self)
+        node = Main_input_count_node(self.main_gate, self)
+        node.master_node = node # this is overriden if called from an ext_node
+        node.node_amount = 1
+        node.next_node = None
         node.center = (self.inout_pos[0], gb.INPUT_HEIGHT)
         self.main_gate.inputs += [node]
         self.draw_node(node)
-        self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
+        self.fond.tag_bind(node.id, "<Button-2>", node.destroy_count)
         self.clean_select()
+        return node
 
     def add_clock_input(self, evt):
-        node = Main_input_node(self.main_gate, self)
+        node = Clock_node(self.main_gate, self)
         node.center = (self.inout_pos[0], gb.INPUT_HEIGHT)
         self.main_gate.inputs += [node]
         self.draw_node(node)
@@ -159,12 +164,16 @@ class Window(Tk):
         self.clean_select()
 
     def add_count_output(self, evt):
-        node = Main_output_node(self.main_gate, self)
+        node = Main_output_count_node(self.main_gate, self)
+        node.master_node = node # this is overriden if called from an ext_node
+        node.node_amount = 1
+        node.next_node = None
         node.center = (self.inout_pos[0], gb.WINDOW_HEIGHT - gb.OUTPUT_HEIGHT)
         self.main_gate.outputs += [node]
         self.draw_node(node)
-        self.fond.tag_bind(node.id, "<Button-2>", node.destroy)
+        self.fond.tag_bind(node.id, "<Button-2>", node.destroy_count)
         self.clean_select()
+        return node
 
     ######################### BINDINGS #########################
     def enable_bindings(self):
@@ -319,6 +328,14 @@ class Window(Tk):
             self.fond.tag_bind(node.text, "<Button-1>", node.clic)
             self.fond.tag_bind(node.text, "<Button-3>", node.r_clic)
             self.fond.tag_bind(node.text, "<Button-2>", node.destroy)
+        if node.get_sub_type() == "count":
+            # count node : on ajoute une pastille d'ajout
+            n = gb.NODE_SIZE // 2
+            px, py = x + gb.NODE_SIZE, y
+            ext_node_id = self.fond.create_oval(px - n, py - n, px + n, py + n, fill = "red")
+            self.fond.tag_bind(ext_node_id, "<Button-1>", node.add_ext_node)
+            self.fond.tag_bind(ext_node_id, "<Button-2>", node.delete_ext)
+            node.ext_node_id = ext_node_id
         if node.get_type() not in ("main_input", "main_output"):
             if gb.DEBUG:
                 self.fond.tag_bind(node.text, "<Button-1>", node.gate.clic)
@@ -357,6 +374,7 @@ class Window(Tk):
         celles qui ne sont pas connectées
         3) On update en partant des nodes de sortie
         """
+        t_in = time.perf_counter()
         gb.PRE_UPDATE()
         # 1)
         for node in self.main_gate.inputs:
@@ -370,6 +388,10 @@ class Window(Tk):
             node.need_previous()
         # Deuxieme update
         gb.UPDATE_ID += 1
+
+        t_out = time.perf_counter()
+
+        print("update time = ", t_out - t_in)
         # # 1)
         # for node in self.main_gate.inputs:
         #     node.need_previous()
@@ -399,7 +421,7 @@ class Window(Tk):
                 self.fond.itemconfig(link_seg_id, fill = "red" if item.active else "white")
             self.fond.tag_lower(item.id_list[-1])
 
-        elif type(item) in (Input_node, Output_node, Main_input_node, Main_output_node):
+        elif type(item) in (Input_node, Output_node, Main_input_node, Main_output_node, Clock_node, Main_input_count_node, Main_output_count_node):
             x, y = item.center
             self.fond.coords(item.id, x - gb.NODE_SIZE, y - gb.NODE_SIZE, x + gb.NODE_SIZE, y + gb.NODE_SIZE)
             self.fond.itemconfig(item.id, fill = "red" if item.active else "white")
@@ -411,6 +433,9 @@ class Window(Tk):
                 self.update(link)
             if item.prev_link:
                 self.update(item.prev_link)
+
+            if item.get_sub_type() == "count" and item.master_node == item:
+                item.update_value_display()
 
         else:
             if item.name != "MAIN":

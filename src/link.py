@@ -19,7 +19,7 @@ class Link:
 
     def delete(self):
         if gb.DEBUG:print("Suppression d'un lien\n___________________________________")
-        if type(self.node1) == nd.Input_node or type(self.node1) == nd.Main_output_node:
+        if type(self.node1) == nd.Input_node or type(self.node1) == nd.Main_output_node or type(self.node1) == nd.Main_output_count_node:
             # Supprime la node précédente de node1
             self.node1.prev = None
             self.node1.prev_link = None
@@ -33,7 +33,7 @@ class Link:
             self.delete()
 
     def get_output(self):
-        if type(self.node1) == nd.Output_node or type(self.node1) == nd.Main_input_node:
+        if type(self.node1) == nd.Output_node or type(self.node1) == nd.Main_input_node or type(self.node1) == nd.Clock_node or type(self.node1) == nd.Main_input_count_node:
             return self.node1
         else:
             return self.node2

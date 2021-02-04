@@ -2,6 +2,7 @@ import src.globals as gb
 from src.gate import New_gate, Gate, And_gate, Not_gate
 from src.node import Input_node, Output_node, Hidden_input_node, Hidden_output_node
 
+
 def load_hidden_gate_from_line(nodes, line, fen):
     element, name, infos1, infos2 = line.split(":")
     if name == "AND":
@@ -36,6 +37,7 @@ def load_hidden_gate_from_line(nodes, line, fen):
             outputs += [already_created]
         Gate.__init__(gate, inputs, outputs)
 
+
 def gate_from_name(name, fen):
     gb.debug("Création d'une SOUS gate {}".format(name))
     with open("lib/structs/" + name, "r") as f:
@@ -46,7 +48,7 @@ def gate_from_name(name, fen):
 
     nodes = dict()
     for line in data:
-        #Création de la table de relation id : node
+        # Création de la table de relation id : node
         element, name, infos1, infos2 = line.split(":")
         if element == "Gate":
             load_hidden_gate_from_line(nodes, line, fen)
@@ -66,6 +68,7 @@ def gate_from_name(name, fen):
     Gate.__init__(final_gate, final_inputs, final_outputs)
     return final_gate
 
+
 def update_links(data, nodes):
     for line in data:
         # on créer les liens entre chaque node
@@ -78,6 +81,7 @@ def update_links(data, nodes):
                     if name in ("input", "main_output"):
                         node.prev = other_node
 
+
 def gate_from_and(fen):
     """
     Créer une gate AND simple
@@ -89,6 +93,7 @@ def gate_from_and(fen):
     Gate.__init__(gate, [input1, input2], [output])
     update_gate_aff(fen, gate)
 
+
 def gate_from_not(fen):
     """
     Créer une gate NOT simple
@@ -99,11 +104,13 @@ def gate_from_not(fen):
     Gate.__init__(gate, [input], [output])
     update_gate_aff(fen, gate)
 
+
 def update_gate_aff(fen, gate):
     gate.update_nodes_coords()
     fen.gates.add(gate)
     fen.draw_gate(gate)
     fen.update_all()
+
 
 class Generator:
     def __init__(self, gate_name, fen):
@@ -127,7 +134,7 @@ class Generator:
 
         nodes = dict()
         for line in data:
-            #Création de la table de relation id : node
+            # Création de la table de relation id : node
             element, name, infos1, infos2 = line.split(":")
             if element == "Gate":
                 load_hidden_gate_from_line(nodes, line, self.fen)

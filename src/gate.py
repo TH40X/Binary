@@ -1,6 +1,4 @@
-from src.node import Input_node, Output_node, Main_input_node, Main_output_node
 import src.globals as gb
-
 
 
 class Gate:
@@ -16,7 +14,7 @@ class Gate:
         gb.debug("Suppression de la gate : {}".format(self.id))
         self.fen.gates.remove(self)
         for node in self.inputs + self.outputs:
-            node.delete(evt) # ne détruit que les liens
+            node.delete(evt)  # ne détruit que les liens
             self.fen.fond.delete(node.id)
             if gb.DEBUG:
                 self.fen.fond.delete(node.text)
@@ -32,7 +30,6 @@ class Gate:
         for i, node in enumerate(self.outputs):
             x = self.center[0] + (2 * gb.NODE_SIZE) * i - (len(self.outputs) - 1) * (2 * gb.NODE_SIZE) / 2
             node.update_center((x, y))
-
 
     def evaluate(self):
         gb.debug("Evaluation initialisée sur la gate {} : {}".format(self.name, self.id))
@@ -56,16 +53,19 @@ class Gate:
         for output_node in self.outputs:
             nodes_to_string += "{},".format(output_node.id)
         nodes_to_string = nodes_to_string[:-1] + "\n"
-        return("Gate:{}:{}".format(self.name, nodes_to_string))
+        return "Gate:{}:{}".format(self.name, nodes_to_string)
+
 
 class New_gate(Gate):
     """
     Permet de précharger une gate
     """
+
     def __init__(self, fen, name):
         self.id = None
         self.fen = fen
         self.name = name
+
 
 class And_gate(Gate):
     def __init__(self, fen):
@@ -75,6 +75,7 @@ class And_gate(Gate):
 
     def evaluate(self):
         self.outputs[0].active = self.inputs[0].active and self.inputs[1].active
+
 
 class Not_gate(Gate):
     def __init__(self, fen):

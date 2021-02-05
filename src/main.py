@@ -6,6 +6,7 @@ import os
 from src.gate_generator import Generator
 from src.link import Link
 import time
+import sys
 
 
 def GB_INFO(evt):
@@ -386,22 +387,10 @@ class Window(Tk):
         # 3)
         for node in self.main_gate.outputs:
             node.need_previous()
-        # Deuxieme update
-        gb.UPDATE_ID += 1
 
         t_out = time.perf_counter()
 
-        print("update time = ", t_out - t_in)
-        # # 1)
-        # for node in self.main_gate.inputs:
-        #     node.need_previous()
-        # # 2)
-        # for gate in self.gates:
-        #     for output_node in gate.outputs:
-        #         output_node.need_previous()
-        # # 3)
-        # for node in self.main_gate.outputs:
-        #     node.need_previous()
+        gb.debug("update time = {}".format(t_out - t_in))
 
     def update(self, item):
         target_class = item.__class__.__bases__
@@ -455,4 +444,7 @@ class Window(Tk):
 
 
 def run():
+    if "-debug" in sys.argv:
+        gb.DEBUG = 1
+
     fen = Window()

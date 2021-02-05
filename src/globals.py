@@ -1,9 +1,18 @@
-# WINDOW
-ZOOM = 1
-ZOOM += 0.3
+TIKTOK = False
 
-WINDOW_WIDTH = int(393 * ZOOM)
+
+
+ZOOM = 1.3
+
+if TIKTOK:
+    # usage for tiktik (vertical window)
+    WINDOW_WIDTH = int(393 * ZOOM)
+else:
+    # usage for computer
+    WINDOW_WIDTH = int(1200 * ZOOM)
 WINDOW_HEIGHT = int(700 * ZOOM)
+
+
 WINDOW_BG = "#303030"
 
 INPUT_HEIGHT = 90
